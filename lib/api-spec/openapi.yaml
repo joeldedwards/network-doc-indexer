@@ -1,0 +1,427 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API for the Document Discovery internal file indexer
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: documents
+    description: Configure, index, search, preview, and share documents
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /documents/config:
+    get:
+      operationId: getIndexerConfig
+      tags: [documents]
+      summary: Get the configured document directory and indexing rules
+      responses:
+        "200":
+          description: Current configuration, or null when setup has not been completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexerConfigResponse"
+    put:
+      operationId: saveIndexerConfig
+      tags: [documents]
+      summary: Save the directory target and indexing rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IndexerConfigInput"
+      responses:
+        "200":
+          description: Saved configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexerConfig"
+  /documents/test-target:
+    post:
+      operationId: testDirectoryTarget
+      tags: [documents]
+      summary: Check read access to a directory target
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DirectoryTestInput"
+      responses:
+        "200":
+          description: Directory accessibility result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryTestResult"
+  /documents/index:
+    post:
+      operationId: startDocumentIndex
+      tags: [documents]
+      summary: Start an asynchronous directory crawl and index
+      responses:
+        "202":
+          description: Indexing started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexStartResult"
+  /documents/index/status:
+    get:
+      operationId: getDocumentIndexStatus
+      tags: [documents]
+      summary: Get current indexing progress
+      responses:
+        "200":
+          description: Current or most recent indexing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexStatus"
+  /documents/stats:
+    get:
+      operationId: getDocumentStats
+      tags: [documents]
+      summary: Get indexed document totals and file-type counts
+      responses:
+        "200":
+          description: Index summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStats"
+  /documents/search:
+    get:
+      operationId: searchDocuments
+      tags: [documents]
+      summary: Search indexed document names or full text
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: mode
+          in: query
+          schema:
+            type: string
+            enum: [content, filename]
+            default: content
+        - name: extension
+          in: query
+          schema:
+            type: string
+        - name: modifiedAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: modifiedBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: minSizeBytes
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+        - name: maxSizeBytes
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Matching indexed documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSearchResponse"
+  /documents/{id}:
+    get:
+      operationId: getDocument
+      tags: [documents]
+      summary: Get indexed document metadata
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: Document metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Document not found
+  /documents/{id}/preview:
+    get:
+      operationId: getDocumentPreview
+      tags: [documents]
+      summary: Read a document preview
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: Preview content and rendering details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentPreview"
+        "404":
+          description: Document not found
+  /documents/{id}/content:
+    get:
+      operationId: getDocumentContent
+      tags: [documents]
+      summary: Stream the raw document content for inline PDF viewing or downloading
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: Raw document content
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Document not found
+  /documents/{id}/email:
+    post:
+      operationId: emailDocument
+      tags: [documents]
+      summary: Email an indexed document as an attachment or internal link
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailDocumentInput"
+      responses:
+        "200":
+          description: Email dispatch result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailDispatchResult"
+        "503":
+          description: SMTP delivery is not configured
+components:
+  parameters:
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    IndexingFrequency:
+      type: string
+      enum: [manual, hourly, daily]
+    IndexerConfig:
+      type: object
+      properties:
+        rootPath: { type: string }
+        includeExtensions:
+          type: array
+          items: { type: string }
+        excludePatterns:
+          type: array
+          items: { type: string }
+        maxFileSizeBytes: { type: integer }
+        indexingFrequency: { $ref: "#/components/schemas/IndexingFrequency" }
+        lastIndexedAt: { type: ["string", "null"], format: date-time }
+        indexedCount: { type: integer }
+      required:
+        - rootPath
+        - includeExtensions
+        - excludePatterns
+        - maxFileSizeBytes
+        - indexingFrequency
+        - lastIndexedAt
+        - indexedCount
+    IndexerConfigResponse:
+      type: object
+      properties:
+        config:
+          oneOf:
+            - $ref: "#/components/schemas/IndexerConfig"
+            - type: "null"
+      required: [config]
+    IndexerConfigInput:
+      type: object
+      properties:
+        rootPath: { type: string, minLength: 1 }
+        includeExtensions:
+          type: array
+          items: { type: string }
+        excludePatterns:
+          type: array
+          items: { type: string }
+        maxFileSizeBytes: { type: integer, minimum: 1 }
+        indexingFrequency:
+          $ref: "#/components/schemas/IndexingFrequency"
+      required:
+        - rootPath
+        - includeExtensions
+        - excludePatterns
+        - maxFileSizeBytes
+        - indexingFrequency
+    DirectoryTestInput:
+      type: object
+      properties:
+        rootPath: { type: string, minLength: 1 }
+      required: [rootPath]
+    DirectoryTestResult:
+      type: object
+      properties:
+        accessible: { type: boolean }
+        fileCount: { type: integer }
+        message: { type: string }
+      required: [accessible, fileCount, message]
+    IndexPhase:
+      type: string
+      enum: [idle, scanning, complete, error]
+    IndexStatus:
+      type: object
+      properties:
+        running: { type: boolean }
+        phase: { $ref: "#/components/schemas/IndexPhase" }
+        discovered: { type: integer }
+        processed: { type: integer }
+        indexed: { type: integer }
+        skipped: { type: integer }
+        errors:
+          type: array
+          items: { type: string }
+        currentFile: { type: ["string", "null"] }
+        startedAt: { type: ["string", "null"], format: date-time }
+        finishedAt: { type: ["string", "null"], format: date-time }
+      required:
+        - running
+        - phase
+        - discovered
+        - processed
+        - indexed
+        - skipped
+        - errors
+        - currentFile
+        - startedAt
+        - finishedAt
+    IndexStartResult:
+      type: object
+      properties:
+        accepted: { type: boolean }
+        message: { type: string }
+        status: { $ref: "#/components/schemas/IndexStatus" }
+      required: [accepted, message, status]
+    DocumentTypeCount:
+      type: object
+      properties:
+        extension: { type: string }
+        count: { type: integer }
+      required: [extension, count]
+    DocumentStats:
+      type: object
+      properties:
+        totalDocuments: { type: integer }
+        totalBytes: { type: integer }
+        typeCounts:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentTypeCount" }
+      required: [totalDocuments, totalBytes, typeCounts]
+    Document:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        relativePath: { type: string }
+        extension: { type: string }
+        sizeBytes: { type: integer }
+        modifiedAt: { type: string, format: date-time }
+        mimeType: { type: string }
+      required: [id, name, relativePath, extension, sizeBytes, modifiedAt, mimeType]
+    DocumentSearchResult:
+      allOf:
+        - $ref: "#/components/schemas/Document"
+        - type: object
+          properties:
+            snippet: { type: string }
+          required: [snippet]
+    DocumentSearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentSearchResult" }
+        totalCount: { type: integer }
+      required: [results, totalCount]
+    DocumentPreview:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [text, pdf, docx, unsupported]
+        content: { type: string }
+        mimeType: { type: string }
+        contentUrl: { type: string }
+        downloadUrl: { type: string }
+      required: [kind, content, mimeType, contentUrl, downloadUrl]
+    EmailDocumentInput:
+      type: object
+      properties:
+        recipients:
+          type: array
+          minItems: 1
+          items: { type: string, format: email }
+        note: { type: string, maxLength: 2000 }
+        deliveryMode:
+          type: string
+          enum: [attachment, link]
+      required: [recipients, deliveryMode]
+    EmailDispatchResult:
+      type: object
+      properties:
+        sent: { type: boolean }
+        message: { type: string }
+      required: [sent, message]
+

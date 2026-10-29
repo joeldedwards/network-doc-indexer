@@ -1,0 +1,8 @@
+node_modules
+.DS_Store
+.env
+.folio_data
+.test_folio_data
+.test_worker_data
+*.tsbuildinfo
+sample-data/misc/

@@ -1,0 +1,11 @@
+{
+  "project": "Northstar",
+  "launch_window": "Q2",
+  "owners": ["Product", "Design", "Support"],
+  "readiness_checks": [
+    "support briefing",
+    "release notes",
+    "accessibility review",
+    "rollback plan"
+  ]
+}

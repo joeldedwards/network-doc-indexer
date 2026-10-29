@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Document Discovery"
+description = "An internal portal for indexing an explicitly configured document folder, searching file contents and names, previewing matching files, and sharing approved documents by link or email."
+version = "1.0.0"
+id = "artifacts/document-discovery"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24569
+
+[services.development]
+run = "pnpm --filter @workspace/document-discovery run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/document-discovery", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/document-discovery/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24569"
+BASE_PATH = "/"

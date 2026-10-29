@@ -1,0 +1,1 @@
+{"version":3,"file":"documentSearchResponse.d.ts","sourceRoot":"","sources":["../../../src/generated/types/documentSearchResponse.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AACH,OAAO,KAAK,EAAE,oBAAoB,EAAE,MAAM,wBAAwB,CAAC;AAEnE,MAAM,WAAW,sBAAsB;IACrC,OAAO,EAAE,oBAAoB,EAAE,CAAC;IAChC,UAAU,EAAE,MAAM,CAAC;CACpB"}

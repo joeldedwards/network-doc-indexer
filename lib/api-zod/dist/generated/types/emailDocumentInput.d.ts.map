@@ -1,0 +1,1 @@
+{"version":3,"file":"emailDocumentInput.d.ts","sourceRoot":"","sources":["../../../src/generated/types/emailDocumentInput.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AACH,OAAO,KAAK,EAAE,8BAA8B,EAAE,MAAM,kCAAkC,CAAC;AAEvF,MAAM,WAAW,kBAAkB;IACjC,kBAAkB;IAClB,UAAU,EAAE,MAAM,EAAE,CAAC;IACrB,sBAAsB;IACtB,IAAI,CAAC,EAAE,MAAM,CAAC;IACd,YAAY,EAAE,8BAA8B,CAAC;CAC9C"}

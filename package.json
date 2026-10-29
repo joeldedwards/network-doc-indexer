@@ -1,0 +1,35 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "build:ui": "cd artifacts/document-discovery && npx vite build",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build": "npm run build:ui && npm run build:electron",
+    "electron": "npx electron .",
+    "dev:ui": "cd artifacts/document-discovery && npx vite",
+    "dev": "node scripts/build-electron.mjs && npx electron .",
+    "test": "node scripts/build-electron.mjs && node scripts/test-desktop-pipeline.mjs && node scripts/test-indexer-worker.mjs",
+    "typecheck": "tsc --build && npx tsc --noEmit -p artifacts/document-discovery/tsconfig.json && npx tsc --noEmit --skipLibCheck --target es2022 --moduleResolution bundler --esModuleInterop --strict electron/*.ts"
+  },
+  "private": true,
+  "dependencies": {
+    "@replit/connectors-sdk": "^0.4.3",
+    "@types/nodemailer": "^8.0.2",
+    "@types/sanitize-html": "^2.16.2",
+    "mammoth": "^1.13.0",
+    "nodemailer": "^10.2.1",
+    "pdf-parse": "^2.4.5",
+    "sanitize-html": "^2.18.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "better-sqlite3": "^13.0.3",
+    "chokidar": "^6.0.0",
+    "electron": "^45.0.0",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3"
+  }
+}

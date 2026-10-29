@@ -1,0 +1,5 @@
+Vendor review notes
+
+The vendor review checks service scope, data handling, retention, support commitments, and renewal terms.
+
+Do not send contract drafts to external recipients until Legal has approved the document. The signed agreement should be stored in the approved contracts folder.
