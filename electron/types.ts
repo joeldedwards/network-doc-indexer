@@ -87,6 +87,7 @@ export interface DocumentPreview {
   kind: 'text' | 'pdf' | 'docx' | 'unsupported';
   content?: string;
   dataUrl?: string;
+  pageImages?: string[];
   mimeType: string;
   uncPath: string;
   fileUrl: string;

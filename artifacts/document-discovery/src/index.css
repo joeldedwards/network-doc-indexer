@@ -330,8 +330,8 @@
   a { color: inherit; text-decoration: none; }
 }
 .app-shell { min-height: 100dvh; display: grid; grid-template-columns: 246px minmax(0, 1fr); }
-.sidebar { min-height: 100dvh; background: linear-gradient(180deg, #002654 0%, #001b3d 100%); color: #eef4fc; padding: 27px 17px 20px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100dvh; }
-.brand { display: flex; gap: 11px; align-items: center; color: #ffffff; margin: 0 7px 53px; font: 800 24px/1 var(--app-font-serif); letter-spacing: -.9px; }
+.sidebar { min-height: 100dvh; background: linear-gradient(180deg, #002654 0%, #001b3d 100%); color: #eef4fc; padding: 48px 17px 20px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100dvh; }
+.brand { display: flex; gap: 11px; align-items: center; color: #ffffff; padding-top: 8px; margin: 0 7px 48px; font: 800 24px/1 var(--app-font-serif); letter-spacing: -.9px; }
 .brand-icon { width: 36px; height: 36px; display: grid; place-items: center; background: #2b88df; color: #001a38; border-radius: 10px 10px 10px 3px; }
 .brand-dot { color: #47a3f3; }
 .brand small { display: block; margin-top: 5px; font: 500 8px/1 var(--app-font-mono); letter-spacing: 1.45px; color: #8fb4dc; }

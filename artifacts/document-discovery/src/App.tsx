@@ -673,22 +673,9 @@ function PreviewPane({
     setActiveMatchIndex(0);
   }, [document.id]);
 
-  const copyUncPath = async () => {
-    await api.copyToClipboard(document.uncPath);
-    setCopiedMode('unc');
-    setTimeout(() => setCopiedMode(null), 2000);
-  };
-
-  const copyFileUrl = async () => {
-    await api.copyToClipboard(document.fileUrl);
-    setCopiedMode('url');
-    setTimeout(() => setCopiedMode(null), 2000);
-  };
-
-  const copyMarkdownLink = async () => {
-    const md = `[${document.name}](${document.uncPath})`;
-    await api.copyToClipboard(md);
-    setCopiedMode('md');
+  const copyFullPath = async () => {
+    await api.copyToClipboard(document.path);
+    setCopiedMode('path');
     setTimeout(() => setCopiedMode(null), 2000);
   };
 
@@ -741,8 +728,8 @@ function PreviewPane({
           <h2 className="truncate" title={document.name}>
             {document.name}
           </h2>
-          <p className="font-mono text-xs opacity-75 truncate" title={document.uncPath}>
-            {document.uncPath}
+          <p className="font-mono text-xs opacity-75 truncate" title={document.path}>
+            {document.path}
           </p>
         </div>
       </div>
@@ -752,42 +739,17 @@ function PreviewPane({
         <button className="primary-button text-xs py-2 px-3" onClick={showInFolder} title="Reveal file in Windows Explorer / macOS Finder">
           <Folder size={14} /> Show in Folder
         </button>
+        <button
+          className={cx('outline-button text-xs py-2 px-3', copiedMode === 'path' && 'chosen')}
+          onClick={copyFullPath}
+          title={`Copy full path (${document.path})`}
+        >
+          {copiedMode === 'path' ? <Check size={14} /> : <Copy size={14} />}
+          {copiedMode === 'path' ? 'Copied Path' : 'Copy Full Path'}
+        </button>
         <button className="outline-button text-xs py-2 px-3" onClick={onEmail} title="Email document or send internal link">
           <Mail size={14} /> Email File
         </button>
-      </div>
-
-      {/* Sharing & Links Dropdown/Group */}
-      <div className="mt-3">
-        <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-          Copy Links
-        </div>
-        <div className="share-actions-group">
-          <button
-            className={cx('share-action-btn', copiedMode === 'unc' && 'active')}
-            onClick={copyUncPath}
-            title="Copy normalized UNC path (\\Server\Share\file.pdf)"
-          >
-            {copiedMode === 'unc' ? <Check size={13} /> : <Copy size={13} />}
-            UNC Path
-          </button>
-          <button
-            className={cx('share-action-btn', copiedMode === 'url' && 'active')}
-            onClick={copyFileUrl}
-            title="Copy file:// URL"
-          >
-            {copiedMode === 'url' ? <Check size={13} /> : <Copy size={13} />}
-            file:// URL
-          </button>
-          <button
-            className={cx('share-action-btn', copiedMode === 'md' && 'active')}
-            onClick={copyMarkdownLink}
-            title="Copy Markdown Link [Name](\\Server\Share\file.pdf)"
-          >
-            {copiedMode === 'md' ? <Check size={13} /> : <Copy size={13} />}
-            Markdown
-          </button>
-        </div>
       </div>
 
       {/* Document Facts / Metadata Header */}
@@ -837,20 +799,12 @@ function PreviewPane({
               <RefreshCw size={13} /> Click to retry
             </button>
           </div>
-        ) : preview?.kind === 'pdf' && preview.dataUrl ? (
-          <div className="flex flex-col gap-2">
-            <iframe
-              className="inline-pdf-frame"
-              title={`Preview of ${document.name}`}
-              src={preview.dataUrl}
-            />
-            <div className="flex justify-between items-center text-xs opacity-70 px-1">
-              <span>Embedded PDF viewer</span>
-              <button onClick={showInFolder} className="text-link text-xs">
-                Open natively
-              </button>
-            </div>
-          </div>
+        ) : preview?.kind === 'pdf' ? (
+          <PdfPreviewViewer
+            documentName={document.name}
+            preview={preview}
+            onShowInFolder={showInFolder}
+          />
         ) : preview?.kind === 'docx' && preview.content ? (
           <div
             className="document-copy docx-content prose dark:prose-invert max-w-none text-sm p-4 bg-card rounded-md border border-border"
@@ -915,6 +869,191 @@ function PreviewPane({
       <Link href={`/view/${document.id}`} className="open-full-link mt-4 inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline">
         Open full-page reader <ArrowRight size={14} />
       </Link>
+    </div>
+  );
+}
+
+function PdfPreviewViewer({
+  documentName,
+  preview,
+  onShowInFolder,
+  fullHeight = false,
+}: {
+  documentName: string;
+  preview: DocumentPreview;
+  onShowInFolder?: () => void;
+  fullHeight?: boolean;
+}) {
+  const hasPageImages = Boolean(preview.pageImages && preview.pageImages.length > 0);
+  const [viewMode, setViewMode] = useState<'pages' | 'text'>(hasPageImages ? 'pages' : 'text');
+  const [findTerm, setFindTerm] = useState('');
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+
+  useEffect(() => {
+    setViewMode(preview.pageImages && preview.pageImages.length > 0 ? 'pages' : 'text');
+    setFindTerm('');
+    setActiveMatchIndex(0);
+  }, [preview.id, preview.pageImages]);
+
+  // Create a Blob URL fallback if dataUrl is present
+  const blobUrl = useMemo(() => {
+    if (!preview.dataUrl || !preview.dataUrl.startsWith('data:application/pdf;base64,')) {
+      return null;
+    }
+    try {
+      const base64 = preview.dataUrl.slice('data:application/pdf;base64,'.length);
+      const binary = window.atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  }, [preview.dataUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [blobUrl]);
+
+  const textMatches = useMemo(() => {
+    if (!findTerm.trim() || !preview.content) return [];
+    const term = findTerm.toLowerCase();
+    const content = preview.content.toLowerCase();
+    const indices: number[] = [];
+    let pos = 0;
+    while ((pos = content.indexOf(term, pos)) !== -1) {
+      indices.push(pos);
+      pos += term.length;
+    }
+    return indices;
+  }, [findTerm, preview.content]);
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="segmented">
+          <button
+            type="button"
+            className={viewMode === 'pages' ? 'chosen' : ''}
+            onClick={() => setViewMode('pages')}
+          >
+            PDF Pages {hasPageImages ? `(${preview.pageImages!.length})` : ''}
+          </button>
+          {preview.content && (
+            <button
+              type="button"
+              className={viewMode === 'text' ? 'chosen' : ''}
+              onClick={() => setViewMode('text')}
+            >
+              Extracted Text
+            </button>
+          )}
+        </div>
+        {onShowInFolder && (
+          <button type="button" onClick={onShowInFolder} className="text-link text-xs">
+            Show in Folder
+          </button>
+        )}
+      </div>
+
+      {viewMode === 'pages' && hasPageImages ? (
+        <div
+          className={cx(
+            'flex flex-col gap-4 overflow-y-auto p-3 bg-muted/60 border border-border rounded-lg',
+            fullHeight ? 'max-h-[720px]' : 'max-h-[500px]'
+          )}
+        >
+          {preview.pageImages!.map((imgSrc, idx) => (
+            <div key={idx} className="flex flex-col items-center gap-1.5">
+              <div className="w-full bg-white rounded shadow-sm border border-border overflow-hidden">
+                <img
+                  src={imgSrc}
+                  alt={`${documentName} — Page ${idx + 1}`}
+                  className="w-full h-auto block"
+                />
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                Page {idx + 1} of {preview.pageImages!.length}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : viewMode === 'pages' && blobUrl ? (
+        <iframe
+          className={fullHeight ? 'w-full h-[650px] border-none' : 'inline-pdf-frame'}
+          title={`Preview of ${documentName}`}
+          src={blobUrl}
+        />
+      ) : (
+        <div>
+          <div className="find-in-preview">
+            <Search size={14} className="opacity-60" />
+            <input
+              value={findTerm}
+              onChange={e => {
+                setFindTerm(e.target.value);
+                setActiveMatchIndex(0);
+              }}
+              placeholder="Find in PDF text…"
+            />
+            {findTerm && (
+              <>
+                <span className="find-match-counter">
+                  {textMatches.length > 0
+                    ? `${activeMatchIndex + 1} of ${textMatches.length}`
+                    : 'No matches'}
+                </span>
+                <button
+                  type="button"
+                  className="find-btn"
+                  onClick={() =>
+                    textMatches.length &&
+                    setActiveMatchIndex((activeMatchIndex - 1 + textMatches.length) % textMatches.length)
+                  }
+                  title="Previous match"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="find-btn"
+                  onClick={() =>
+                    textMatches.length &&
+                    setActiveMatchIndex((activeMatchIndex + 1) % textMatches.length)
+                  }
+                  title="Next match"
+                >
+                  <ChevronDown size={14} />
+                </button>
+                <button type="button" className="find-btn" onClick={() => setFindTerm('')} title="Clear">
+                  <X size={14} />
+                </button>
+              </>
+            )}
+          </div>
+          <div
+            className={cx(
+              'document-copy whitespace-pre-wrap font-mono text-xs leading-relaxed overflow-y-auto p-3 bg-card border border-border rounded-md',
+              fullHeight ? 'max-h-[640px]' : 'max-h-[460px]'
+            )}
+          >
+            {findTerm.trim() && preview.content ? (
+              <FindHighlightedText
+                text={preview.content}
+                query={findTerm}
+                activeIndex={activeMatchIndex}
+              />
+            ) : (
+              preview.content || 'No extractable text found in this PDF.'
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1920,12 +2059,15 @@ function DocumentView({ id }: { id: string }) {
           <span>{document.name}</span>
           <span>FOLIO DESKTOP DISCOVERY</span>
         </div>
-        {preview?.kind === 'pdf' && preview.dataUrl ? (
-          <iframe
-            className="w-full h-[650px] border-none"
-            title={document.name}
-            src={preview.dataUrl}
-          />
+        {preview?.kind === 'pdf' ? (
+          <div className="p-5">
+            <PdfPreviewViewer
+              documentName={document.name}
+              preview={preview}
+              onShowInFolder={showInFolder}
+              fullHeight
+            />
+          </div>
         ) : preview?.kind === 'docx' && preview.content ? (
           <article
             className="docx-content prose dark:prose-invert max-w-none p-6"

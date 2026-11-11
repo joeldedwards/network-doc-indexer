@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import sanitizeHtml from 'sanitize-html';
 import type { DocumentPreview } from './types';
@@ -27,16 +28,37 @@ export async function generateDocumentPreview(fileId: string, timeoutMs = 4000):
     const stats = await fs.stat(file.path);
     const ext = file.extension.toLowerCase();
 
-    // 1. PDF Preview
+    // 1. PDF Preview (rendered page images + extracted searchable text)
     if (ext === '.pdf') {
       const buffer = await fs.readFile(file.path);
       const base64 = buffer.toString('base64');
+      let pageImages: string[] = [];
+      let extractedText = '';
+
+      const parser = new PDFParse({ data: buffer });
+      try {
+        const [screenshotRes, textRes] = await Promise.all([
+          parser.getScreenshot({ scale: 1.5, imageDataUrl: true, first: 15 }),
+          parser.getText(),
+        ]);
+        pageImages = (screenshotRes.pages || [])
+          .map(p => p.dataUrl)
+          .filter((url): url is string => Boolean(url));
+        extractedText = (textRes.text || '').trim();
+      } catch {
+        // Fallback if page rasterization fails on an unusual PDF
+      } finally {
+        await parser.destroy().catch(() => {});
+      }
+
       return {
         id: file.id,
         name: file.name,
         relativePath: file.relativePath,
         kind: 'pdf',
         dataUrl: `data:application/pdf;base64,${base64}`,
+        pageImages,
+        content: extractedText,
         mimeType: 'application/pdf',
         uncPath,
         fileUrl,

@@ -6,6 +6,22 @@ It crawls and indexes mapped network drives, Windows UNC shares (`\\Server\Share
 
 ---
 
+## Screenshots
+
+### Search & Discovery Workspace (Light Mode)
+![Search & Discovery Workspace (Light Mode)](./screenshots/search-home.png)
+
+### Search & Discovery Workspace (Dark Mode)
+![Search & Discovery Workspace (Dark Mode)](./screenshots/search-home-darkmode.png)
+
+### Full-Page Document Reader
+![Full-Page Document Reader](./screenshots/document-full-page.png)
+
+### Index Engine Settings
+![Index Engine Settings](./screenshots/settings.png)
+
+---
+
 ## Key Features
 
 ### 1. Guided 3-Step Setup & Network Validation
@@ -23,7 +39,7 @@ It crawls and indexes mapped network drives, Windows UNC shares (`\\Server\Share
 ### 3. Resizable Split-Pane Workspace & Inline Previews
 - **Draggable Split Pane**: Resize the search results list and document preview pane smoothly (`30%` to `75%`).
 - **Format-Specific Inline Viewers**:
-  - **PDF (`.pdf`)**: Embedded base64 PDF viewer (`<iframe>`) with native zoom/page controls.
+  - **PDF (`.pdf`)**: High-DPI multi-page visual preview (`PDFParse.getScreenshot`) paired with a toggle for searchable **Extracted Text** (including "Find in PDF text").
   - **Word (`.docx`)**: Converted to clean semantic HTML via `mammoth` and sanitized with `sanitize-html`.
   - **Spreadsheets (`.xlsx`, `.xls`, `.xlsm`, `.ods`, `.csv`, `.tsv`)**: Extracted sheet-by-sheet and row-by-row using an in-memory `zlib` XML/ZIP reader and rendered in a searchable tabular text view.
   - **Plaintext, Markdown, Logs & JSON (`.txt`, `.md`, `.log`, `.json`)**: Monospace viewer with an interactive **"Find in Preview"** toolbar (`X of Y` match counter and next/previous match navigation).
@@ -31,10 +47,7 @@ It crawls and indexes mapped network drives, Windows UNC shares (`\\Server\Share
 - **Full-Page Reader**: Dedicated `/view/:id` route for distraction-free document reading.
 
 ### 4. Network Path Sharing, OS Integration & Email Dispatch
-- **One-Click Clipboard Links**:
-  - **UNC Path**: Normalized Windows network path (`\\Server\Share\subfolder\document.pdf`).
-  - **`file://` URL**: Standard RFC-compliant file URI (`file:///...`).
-  - **Markdown Link**: Ready-to-paste Markdown reference (`[document.pdf](\\Server\Share\subfolder\document.pdf)`).
+- **One-Click Full Path Copy**: Copy the complete resolved file path directly to the clipboard from the preview action bar.
 - **Native Folder Reveal**: **Show in Folder** button wired to Electron's `shell.showItemInFolder()` to highlight the file directly in macOS Finder or Windows Explorer.
 - **Email Dispatcher with 25 MB Safeguard**:
   - Choose between sending the **File Attachment** or an **Internal UNC Link**.

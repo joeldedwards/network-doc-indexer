@@ -493,6 +493,7 @@ function getDocumentStats() {
 
 // electron/preview-service.ts
 var import_promises2 = __toESM(require("node:fs/promises"));
+var import_pdf_parse = require("pdf-parse");
 var import_mammoth = __toESM(require("mammoth"));
 var import_sanitize_html = __toESM(require("sanitize-html"));
 
@@ -689,12 +690,29 @@ async function generateDocumentPreview(fileId, timeoutMs = 4e3) {
     if (ext === ".pdf") {
       const buffer = await import_promises2.default.readFile(file.path);
       const base64 = buffer.toString("base64");
+      let pageImages = [];
+      let extractedText = "";
+      const parser = new import_pdf_parse.PDFParse({ data: buffer });
+      try {
+        const [screenshotRes, textRes] = await Promise.all([
+          parser.getScreenshot({ scale: 1.5, imageDataUrl: true, first: 15 }),
+          parser.getText()
+        ]);
+        pageImages = (screenshotRes.pages || []).map((p) => p.dataUrl).filter((url) => Boolean(url));
+        extractedText = (textRes.text || "").trim();
+      } catch {
+      } finally {
+        await parser.destroy().catch(() => {
+        });
+      }
       return {
         id: file.id,
         name: file.name,
         relativePath: file.relativePath,
         kind: "pdf",
         dataUrl: `data:application/pdf;base64,${base64}`,
+        pageImages,
+        content: extractedText,
         mimeType: "application/pdf",
         uncPath,
         fileUrl,
@@ -882,7 +900,7 @@ var import_promises3 = __toESM(require("node:fs/promises"));
 var import_node_fs3 = require("node:fs");
 var import_node_crypto = __toESM(require("node:crypto"));
 var import_chokidar = __toESM(require("chokidar"));
-var import_pdf_parse = require("pdf-parse");
+var import_pdf_parse2 = require("pdf-parse");
 var import_mammoth2 = __toESM(require("mammoth"));
 var activeWatcher = null;
 function isExcluded(relativePath, fileName, patterns) {
@@ -924,7 +942,7 @@ async function extractText(filePath, ext) {
   const extension = ext.toLowerCase();
   if (extension === ".pdf") {
     const buffer2 = await import_promises3.default.readFile(filePath);
-    const parser = new import_pdf_parse.PDFParse({ data: buffer2 });
+    const parser = new import_pdf_parse2.PDFParse({ data: buffer2 });
     try {
       const res = await parser.getText();
       return (res.text || "").slice(0, 2e6);
@@ -1038,15 +1056,20 @@ function createWindow() {
       preload: import_node_path4.default.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      plugins: true
     }
   });
   import_electron2.session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (details.url.startsWith("chrome-extension://") || details.url.startsWith("devtools://")) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         "Content-Security-Policy": [
-          "default-src 'self' 'unsafe-inline' data: blob: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; font-src 'self' data: http://localhost:*; img-src 'self' data: blob: http://localhost:*; frame-src 'self' data: blob: http://localhost:*;"
+          "default-src 'self' 'unsafe-inline' data: blob: file: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; font-src 'self' data: http://localhost:*; img-src 'self' data: blob: file: http://localhost:*; media-src 'self' data: blob: file:; object-src 'self' data: blob: file:; frame-src 'self' data: blob: file: chrome-extension: http://localhost:*;"
         ]
       }
     });

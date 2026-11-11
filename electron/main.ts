@@ -52,16 +52,21 @@ function createWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      plugins: true,
     },
   });
 
-  // Strict Content Security Policy
+  // Strict Content Security Policy (skip internal chrome-extension:// PDF viewer frames)
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (details.url.startsWith('chrome-extension://') || details.url.startsWith('devtools://')) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' data: blob: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; font-src 'self' data: http://localhost:*; img-src 'self' data: blob: http://localhost:*; frame-src 'self' data: blob: http://localhost:*;",
+          "default-src 'self' 'unsafe-inline' data: blob: file: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; font-src 'self' data: http://localhost:*; img-src 'self' data: blob: file: http://localhost:*; media-src 'self' data: blob: file:; object-src 'self' data: blob: file:; frame-src 'self' data: blob: file: chrome-extension: http://localhost:*;",
         ],
       },
     });
